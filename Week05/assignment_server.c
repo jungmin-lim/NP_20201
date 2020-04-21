@@ -18,9 +18,9 @@ int main(int argc, char *argv[]){
     int recv_cnt, recv_len;
     struct sockaddr_in serv_adr, clnt_adr;
     socklen_t clnt_adr_sz;
-    
+
     if(argc != 2){
-        printf("Usage : %s <port>\n", argv[0]);
+        printf("Usage: %s <port>\n", argv[0]);
         exit(1);
     }
 
@@ -34,7 +34,7 @@ int main(int argc, char *argv[]){
     serv_adr.sin_addr.s_addr = htonl(INADDR_ANY);
     serv_adr.sin_port = htons(atoi(argv[1]));
 
-    if(bind(serv_sock, (struct sockaddr*)&serv_adr, sizeof(serv_adr)) == -1){
+    if(bind(serv_sock, (struct sockaddr *)&serv_adr, sizeof(serv_adr)) == -1){
         error_handling("bind() error");
     }
 
@@ -43,21 +43,31 @@ int main(int argc, char *argv[]){
     }
 
     clnt_adr_sz = sizeof(clnt_adr);
-    for(i = 0; i < 5; ++i){
+
+    while(1){
         opnd_cnt = 0;
         clnt_sock = accept(serv_sock, (struct sockaddr *)&clnt_adr, &clnt_adr_sz);
+
         while(1){
             read(clnt_sock, &opnd_cnt, 1);
+            if(opnd_cnt == -1){
+                printf("opnd_cnt = -1 break\n");
+                break;
+            }
             recv_len = 0;
+
             while((opnd_cnt * OPSZ + 1) > recv_len){
-                recv_cnt =read(clnt_sock, &opinfo[recv_len], BUF_SIZE-1);
+                recv_cnt = read(clnt_sock, &opinfo[recv_len], BUF_SIZE - 1);
                 recv_len += recv_cnt;
             }
+
             result = calculate(opnd_cnt, (int *)opinfo, opinfo[recv_len - 1]);
             write(clnt_sock, (char *)&result, sizeof(result));
         }
+
         close(clnt_sock);
     }
+
     close(serv_sock);
     return 0;
 }
@@ -66,25 +76,31 @@ void error_handling(char *message){
     fputs(message, stderr);
     fputc('\n', stderr);
     exit(1);
-
 }
+
 int calculate(int opnum, int opnds[], char op){
     int result = opnds[0], i;
-    switch(op){
-        case '+':
-            for(i = 1; i < opnum; ++i) result += opnds[i];
-            break;
-        case '-':
-            for(i = 1; i < opnum; ++i) result -= opnds[i];
-            break;
-        case '*':
-            for(i = 1; i < opnum; ++i) result *= opnds[i];
-            break;
-        case '^':
-            for(i = 1; i < opnds[1]; ++i) result *= opnds[0];
-            break;
-        default:
-            break;
+
+    if(op == '+'){
+        for(i = 1; i < opnum; ++i){
+            result += opnds[i];
+        }
     }
+    else if(op == '-'){
+        for(i = 1; i < opnum; ++i){
+            result -= opnds[i];
+        }
+    }
+    else if(op == '*'){
+        for(i = 1; i < opnum; ++i){
+            result *= opnds[i];
+        }
+    }
+    else if(op == '^'){
+        for(i = 0; i < opnds[1]; ++i){
+            result *= opnds[0];
+        }
+    }
+
     return result;
 }

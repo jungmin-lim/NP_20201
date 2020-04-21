@@ -41,11 +41,12 @@ int main(int argc, char *argv[]){
             fputs("Operant count(-1 to quit): ", stdout);
             scanf("%d", &opnd_cnt);
 
+            opmsg[0] = (char)opnd_cnt;
+
             if(opnd_cnt == -1){
+                write(sock, opmsg, 1);
                 break;
             }
-
-            opmsg[0] = (char)opnd_cnt;
             
             for(i = 0; i < opnd_cnt; ++i){
                 printf("Operant %d: ", i + 1);
