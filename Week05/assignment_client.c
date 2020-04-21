@@ -37,33 +37,32 @@ int main(int argc, char *argv[]){
     }
     else{
         puts("Connected......");
-        while(1){
-            fputs("Operant count(-1 to quit): ", stdout);
-            scanf("%d", &opnd_cnt);
 
-            opmsg[0] = (char)opnd_cnt;
-
-            if(opnd_cnt == -1){
-                write(sock, opmsg, 1);
-                break;
-            }
-            
-            for(i = 0; i < opnd_cnt; ++i){
-                printf("Operant %d: ", i + 1);
-                scanf("%d", (int *)&opmsg[i*OPSZ +1]);
-            }
-            fgetc(stdin);
-            fputs("Operator: ", stdout);
-            scanf("%c", &opmsg[opnd_cnt * OPSZ + 1]);
-            write(sock, opmsg, opnd_cnt * OPSZ + 2);
-            read(sock, &result, RLT_SIZE);
-
-            printf("Operation result: %d\n", result);
-        }
-
-        close(sock);
-        return 0;
     }
+    while(1){
+        fputs("Operant count(-1 to quit): ", stdout);
+        scanf("%d", &opnd_cnt);
+
+        if(opnd_cnt == -1){
+            break;
+        }
+        opmsg[0] = (char)opnd_cnt;
+
+        for(i = 0; i < opnd_cnt; ++i){
+            printf("Operant %d: ", i + 1);
+            scanf("%d", (int *)&opmsg[i*OPSZ +1]);
+        }
+        fgetc(stdin);
+        fputs("Operator: ", stdout);
+        scanf("%c", &opmsg[opnd_cnt * OPSZ + 1]);
+        write(sock, opmsg, opnd_cnt * OPSZ + 2);
+        read(sock, &result, RLT_SIZE);
+
+        printf("Operation result: %d\n", result);
+    }
+
+    close(sock);
+    return 0;
 }
 
 void error_handling(char *message){

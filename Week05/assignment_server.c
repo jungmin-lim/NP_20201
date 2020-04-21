@@ -45,15 +45,17 @@ int main(int argc, char *argv[]){
     clnt_adr_sz = sizeof(clnt_adr);
 
     while(1){
+        int check = 0;
         opnd_cnt = 0;
         clnt_sock = accept(serv_sock, (struct sockaddr *)&clnt_adr, &clnt_adr_sz);
 
         while(1){
-            read(clnt_sock, &opnd_cnt, 1);
-            if(opnd_cnt == -1){
-                printf("opnd_cnt = -1 break\n");
+            int t = read(clnt_sock, &opnd_cnt, 1);
+            if(t == -1 || t == 0){
+                check = 1;
                 break;
             }
+
             recv_len = 0;
 
             while((opnd_cnt * OPSZ + 1) > recv_len){
@@ -97,7 +99,7 @@ int calculate(int opnum, int opnds[], char op){
         }
     }
     else if(op == '^'){
-        for(i = 0; i < opnds[1]; ++i){
+        for(i = 0; i < opnds[1] - 1; ++i){
             result *= opnds[0];
         }
     }
