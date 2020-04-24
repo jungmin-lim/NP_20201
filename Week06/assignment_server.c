@@ -47,7 +47,6 @@ int main(int argc, char *argv[]){
             str_len = read(clnt_sock, &buf, BUF_SIZE);
             memcpy(name, buf, str_len);
             name[str_len] = '\0';
-            printf("buf = %s\n", name);
             if(!strcmp(name, "q") || !strcmp(name, "Q")){
                 break;
             }
