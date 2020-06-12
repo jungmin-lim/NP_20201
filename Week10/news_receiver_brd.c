@@ -38,8 +38,9 @@ int main(int argc, char *argv[]){
         if(str_len < 0){
             break;
         }
-        buf[str_len] = '\0';
+        buf[str_len] = '0';
         fputs(buf, stdout);
+        str_len =-1;
     }
     close(recv_sock);
     return 0;
