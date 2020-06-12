@@ -8,8 +8,7 @@
 #define BUF_SIZE 1024
 void error_handling(char *message);
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]){
 	int sock;
 	char message[BUF_SIZE];
 	int str_len;
@@ -34,8 +33,7 @@ int main(int argc, char *argv[])
 	else
 		puts("Connected...........");
 	
-	while(1) 
-	{
+	while(1) {
 		fputs("Input message(Q to quit): ", stdout);
 		fgets(message, BUF_SIZE, stdin);
 		

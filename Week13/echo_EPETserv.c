@@ -13,8 +13,7 @@
 void setnonblockingmode(int fd);
 void error_handling(char *buf);
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]){
 	int serv_sock, clnt_sock;
 	struct sockaddr_in serv_adr, clnt_adr;
 	socklen_t adr_sz;
@@ -49,49 +48,51 @@ int main(int argc, char *argv[])
 	event.data.fd=serv_sock;	
 	epoll_ctl(epfd, EPOLL_CTL_ADD, serv_sock, &event);
 
-	while(1)
-	{
+	while(1){
 		event_cnt=epoll_wait(epfd, ep_events, EPOLL_SIZE, -1);
-		if(event_cnt==-1)
-		{
+
+		if(event_cnt==-1){
 			puts("epoll_wait() error");
 			break;
 		}
 
 		puts("return epoll_wait");
-		for(i=0; i<event_cnt; i++)
-		{
-			if(ep_events[i].data.fd==serv_sock)
-			{
+
+		for(i=0; i<event_cnt; i++){
+
+			if(ep_events[i].data.fd==serv_sock){
+
 				adr_sz=sizeof(clnt_adr);
 				clnt_sock=accept(serv_sock, (struct sockaddr*)&clnt_adr, &adr_sz);
+
 				setnonblockingmode(clnt_sock);
 				event.events=EPOLLIN|EPOLLET;
 				event.data.fd=clnt_sock;
 				epoll_ctl(epfd, EPOLL_CTL_ADD, clnt_sock, &event);
+
 				printf("connected client: %d \n", clnt_sock);
 			}
-			else
-			{
-					while(1)
-					{
-						str_len=read(ep_events[i].data.fd, buf, BUF_SIZE);
-						if(str_len==0)    // close request!
-						{
-							epoll_ctl(epfd, EPOLL_CTL_DEL, ep_events[i].data.fd, NULL);
-							close(ep_events[i].data.fd);
-							printf("closed client: %d \n", ep_events[i].data.fd);
+
+			else{
+				while(1){
+					str_len=read(ep_events[i].data.fd, buf, BUF_SIZE);
+
+					if(str_len==0){
+						epoll_ctl(epfd, EPOLL_CTL_DEL, ep_events[i].data.fd, NULL);
+						close(ep_events[i].data.fd);
+						printf("closed client: %d \n", ep_events[i].data.fd);
+						break;
+					}
+
+					else if(str_len<0){
+						if(errno==EAGAIN){
 							break;
 						}
-						else if(str_len<0)
-						{
-							if(errno==EAGAIN)
-								break;
-						}
-						else
-						{
-							write(ep_events[i].data.fd, buf, str_len);    // echo!
-						}
+					}
+
+					else{
+						write(ep_events[i].data.fd, buf, str_len);
+					}
 				}
 			}
 		}
@@ -101,14 +102,13 @@ int main(int argc, char *argv[])
 	return 0;
 }
 
-void setnonblockingmode(int fd)
-{
+void setnonblockingmode(int fd){
 	int flag=fcntl(fd, F_GETFL, 0);
 	fcntl(fd, F_SETFL, flag|O_NONBLOCK);
 }
-void error_handling(char *buf)
-{
-	fputs(buf, stderr);
+
+void error_handling(char *message){
+	fputs(message, stderr);
 	fputc('\n', stderr);
 	exit(1);
 }
