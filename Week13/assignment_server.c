@@ -50,7 +50,7 @@ int main(int argc, char *argv[]){
 
 	while(1){
 		event_cnt=epoll_wait(epfd, ep_events, EPOLL_SIZE, -1);
-
+        fprintf(stdout, "current event_cnt is %d\n", event_cnt);
 		if(event_cnt==-1){
 			puts("epoll_wait() error");
 			break;
