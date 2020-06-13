@@ -17,7 +17,7 @@ int main(int argc, char *argv[]){
 	int serv_sock, clnt_sock;
 	struct sockaddr_in serv_adr, clnt_adr;
 	socklen_t adr_sz;
-	int str_len, i;
+	int str_len, i, j;
 	char buf[BUF_SIZE];
 
 	struct epoll_event *ep_events;
