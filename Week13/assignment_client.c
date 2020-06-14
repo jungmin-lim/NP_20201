@@ -66,6 +66,9 @@ void write_routine(int sock, char *buf) {
             shutdown(sock, SHUT_WR);
             return;
         }
+		else if(!strcmp(buf, "\n")){
+			continue;
+		}
         
         sprintf(message, "%s", buf);
         

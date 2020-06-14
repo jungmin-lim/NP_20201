@@ -8,17 +8,17 @@
 #include <sys/socket.h>
 #include <sys/epoll.h>
 
-#define BUF_SIZE 4
+#define BUF_SIZE 1024
 #define EPOLL_SIZE 50
 void setnonblockingmode(int fd);
 void error_handling(char *buf);
 
 int main(int argc, char *argv[]){
-	int serv_sock, clnt_sock;
+	int serv_sock, clnt_sock, client_fd;
 	struct sockaddr_in serv_adr, clnt_adr;
 	socklen_t adr_sz;
-	int str_len, i, j;
-	char buf[BUF_SIZE];
+	int str_len, count = 0, i, j;
+	char buf[BUF_SIZE], message[BUF_SIZE];
 
 	struct epoll_event *ep_events;
 	struct epoll_event event;
@@ -50,7 +50,6 @@ int main(int argc, char *argv[]){
 
 	while(1){
 		event_cnt=epoll_wait(epfd, ep_events, EPOLL_SIZE, -1);
-        fprintf(stdout, "current event_cnt is %d\n", event_cnt);
 		if(event_cnt==-1){
 			puts("epoll_wait() error");
 			break;
@@ -71,33 +70,31 @@ int main(int argc, char *argv[]){
 				epoll_ctl(epfd, EPOLL_CTL_ADD, clnt_sock, &event);
 
 				printf("connected client: %d \n", clnt_sock);
+				count++;
 			}
 
 			else{
-				while(1){
-					str_len=read(ep_events[i].data.fd, buf, BUF_SIZE);
-                    sprintf(buf, "client %d: %s", buf);
-                    str_len = strlen(buf);
+				client_fd = ep_events[i].data.fd;
+				str_len=read(ep_events[i].data.fd, buf, BUF_SIZE);
+				
+				if(str_len == 0){
+					epoll_ctl(epfd, EPOLL_CTL_DEL, ep_events[i].data.fd, NULL);
+					close(ep_events[i].data.fd);
+					printf("closed client: %d \n", ep_events[i].data.fd);
+					count--;
+					break;
+				}
+				else{
+					message[0] = '\0';
+					buf[str_len] = '\0';
+               		sprintf(message, "client %d: %s", client_fd, buf);
+					buf[0] = '\0';
+					strcat(buf, message);
+               		str_len = strlen(buf);
 
-					if(str_len==0){
-						epoll_ctl(epfd, EPOLL_CTL_DEL, ep_events[i].data.fd, NULL);
-						close(ep_events[i].data.fd);
-						printf("closed client: %d \n", ep_events[i].data.fd);
-						break;
-					}
-
-					else if(str_len<0){
-						if(errno==EAGAIN){
-							break;
-						}
-					}
-
-					else{
-                        for(j = 0; j < event_cnt; ++j){
-                            if((j == serv_sock) || (j == i)) continue;
-                            else write(ep_events[j].data.fd, buf, str_len);
-                        }
-					}
+                	for(j = 5; j < 5+count; ++j){
+                    	if(j != client_fd) write(j, buf, str_len);
+                    }
 				}
 			}
 		}
