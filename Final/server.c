@@ -8,6 +8,9 @@
 #include <sys/select.h>
  
 #define BUF_SIZE 1024
+#define MAX_GAME 9 
+#define MAX_STR 20
+
 void error_handling(char *buf);
  
 int main(int argc, char *argv[]){
@@ -16,10 +19,13 @@ int main(int argc, char *argv[]){
     struct timeval timeout;
     fd_set reads, cpy_reads;
     socklen_t adr_sz;
-    int fd_max, str_len, fd_num, i, j;
-    char buf[BUF_SIZE], message[BUF_SIZE];
-    char welcome[BUF_SIZE] = "Server : Welcome~\n";
-    char serv_welcome[BUF_SIZE], clnt_welcome[BUF_SIZE];
+
+    int fd_max, str_len, fd_num, opponent;
+    int i, j;
+
+    char buf[BUF_SIZE];
+
+    int connection[50], current = 4;
  
     if(argc!=2) {
         printf("Usage : %s <port>\n", argv[0]);
@@ -43,6 +49,11 @@ int main(int argc, char *argv[]){
     FD_SET(serv_sock, &reads);
     fd_max=serv_sock;
  
+    // init
+    for(i = 0; i < 50; ++i){
+        connection[i] = -2;
+    }
+
     while(1) {
         cpy_reads=reads;
         timeout.tv_sec=5;
@@ -56,52 +67,61 @@ int main(int argc, char *argv[]){
         }
         for(i=0; i<fd_max+1; i++) {
             if(FD_ISSET(i, &cpy_reads)) {
+                // client connection
                 if(i==serv_sock) {
                     adr_sz=sizeof(clnt_adr);
                     clnt_sock=accept(serv_sock, (struct sockaddr*)&clnt_adr, &adr_sz);
                     
                     FD_SET(clnt_sock, &reads);
+                    if(clnt_sock >= 50){
+                        sprintf(buf, "CONNECTION FULL. TRY LATER");
+                        write(clnt_sock, buf, strlen(buf));
+                        close(clnt_sock);
+                        continue;
+                    }
                     if(fd_max<clnt_sock)
                         fd_max=clnt_sock;
                     printf("connected client: %d \n", clnt_sock);
 
-                    sprintf(clnt_welcome, "Server : client %d has joined this chatting room\n", clnt_sock);
-                    sprintf(serv_welcome, "Server : The number of client is %d now\n", fd_max-3);
-                    strcpy(buf, welcome);
-                    buf[strlen(welcome)] = '\0';
-                    strcat(buf, serv_welcome);
+                    if((current == clnt_sock) || (connection[current] != -1)){
+                        sprintf(buf, "WAITING OPPONENT");
+                        write(clnt_sock, buf, strlen(buf));
+                        connection[clnt_sock] = -1;
+                        current = clnt_sock;
+                    }
+                    else{
+                        connection[current] = clnt_sock;
+                        connection[clnt_sock] = current;
+                        sprintf(buf, "OPPONENT FOUND. GAME START!");
+                        write(current, buf, strlen(buf));
+                        write(clnt_sock, buf, strlen(buf));
 
-                    write(clnt_sock, buf, strlen(buf));
-
-                    strcpy(buf, clnt_welcome);
-                    buf[strlen(clnt_welcome)] = '\0';
-                    for(j = 4; j < fd_max; ++j){
-                        if(j == serv_sock) continue;
-                        else{
-                            write(j, buf, strlen(buf));
-                        }
+                        current = clnt_sock;
                     }
                 }
                 else {
                     str_len=read(i, buf, BUF_SIZE);
                     buf[str_len] = '\0';
-                    if(str_len==0) {    
+                    fprintf(stdout, "Movement of %d : %s\n", i, buf);
+
+                    // client connection lost 
+                    if(str_len <=0) {
                         FD_CLR(i, &reads);
                         close(i);
-                        printf("closed client: %d \n", i);
-                        sprintf(message, "client %d has left this chatting room\n", i);
-                        for(j = 4; j < fd_max + 1; ++j){
-                            if(j == i) continue;
-                            write(j, message, strlen(message));
+                        fprintf(stdout, "closed client: %d \n", i);
+
+                        if(connection[i] != -1){
+                            FD_CLR(connection[i], &reads);
+                            close(connection[i]);
+                            fprintf(stdout, "closed client: %d\n", connection[i]);
+                            connection[i] = -1;
+                            connection[connection[i]] = -1;
                         }
                     }
+
+                    // game play
                     else {
-                        message[0] = '\0';
-                        sprintf(message, "client %d : %s", i, buf);
-                        for(j=4; j < fd_max + 1; j++) { 
-                            if(j == i) continue;
-                            write(j, message, strlen(message));
-                        }
+                        write(connection[i], buf, strlen(buf));
                     }
                 }
             }

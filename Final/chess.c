@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #define KING 12
 #define QUEEN 10
@@ -21,6 +22,7 @@ int board[8][8] = {
 };
 
 void print_board();
+void clear_board();
 
 // if impossible, return -1. else, move piece and return 1
 int input(char move[], int player);
@@ -31,15 +33,18 @@ int knight(int sx, int sy, int ex, int ey);
 int rook(int sx, int sy, int ex, int ey);
 int pawn(int sx, int sy, int ex, int ey);
 
+/*
 int main(int argc, char *argv[]){
     char str[1024];
     int player = 1, state = 1;
+    // fprintf(stdout, "\033[?1049h\033[H");
     print_board();
 
     while(state){
         scanf("%s", str);
         if(input(str, player) < 0){
             printf("invalid move\n");
+            continue;
         }
         print_board();
         player = player * (-1);
@@ -47,10 +52,11 @@ int main(int argc, char *argv[]){
 
     return 0;
 }
-
+*/
 void print_board(){
     int row, col;
 
+    clear_board();
     fprintf(stdout, " ");
     for(col = 0 ; col < 8; ++col){
         fprintf(stdout, "   %c", 'a'+col);
@@ -97,15 +103,26 @@ void print_board(){
                 case -PAWN:
                     fprintf(stdout, "p");
                     break;
+                case 0:
+                    fprintf(stdout, " ");
+                    break;
             }
         }
         fprintf(stdout, "\n");
     }
+    fprintf(stdout, "\n");
+}
+
+void clear_board(){
+    fflush(stdout);
+    // fprintf(stdout, "\033[?1049l");
+    printf("\33[2J");
 }
 
 int input(char move[], int player){
     // move example e7e5 -> move piece from e7 to e5
     int sx, sy, ex, ey;
+    int ret;
 
     if(strlen(move) != 4) return -1;
 
@@ -126,22 +143,34 @@ int input(char move[], int player){
 
     switch(abs(board[sy][sx])){
         case KING :
-            if(king(sx, sy, ex, ey) > 0) return 1;
+            ret = king(sx, sy, ex, ey);
+            if(ret == 100) return 100;
+            else if(ret > 0) return 1;
             else return -1;
         case QUEEN :
-            if(queen(sx, sy, ex, sy) > 0) return 1;
+            ret = queen(sx, sy, ex, ey);
+            if(ret == 100) return 100;
+            else if(ret > 0) return 1;
             else return -1;
         case BISHOP:
-            if(bishop(sx, sy, ex, ey) > 0) return 1;
+            ret = bishop(sx, sy, ex, ey);
+            if(ret == 100) return 100;
+            else if(ret > 0) return 1;
             else return -1;
         case KNIGHT:
-            if(knight(sx, sy, ex, ey) > 0) return 1;
+            ret = knight(sx, sy, ex, ey);
+            if(ret == 100) return 100;
+            else if(ret > 0) return 1;
             else return -1;
         case ROOK : 
-            if(rook(sx, sy, ex, ey) > 0) return 1;
+            ret = rook(sx, sy, ex, ey);
+            if(ret == 100) return 100;
+            else if(ret > 0) return 1;
             else return -1;
         case PAWN:
-            if(pawn(sx, sy, ex, ey) > 0) return 1;
+            ret = pawn(sx, sy, ex, ey);
+            if(ret == 100) return 100;
+            else if(ret > 0) return 1;
             else return -1;
     }
     return -1;
@@ -157,42 +186,94 @@ int king(int sx, int sy, int ex, int ey){
     int player = board[sy][sx] / KING;
 
     dx = ex - sx;
-    dy = ey - ex;
+    dy = ey - sy;
 
     for(i = 0; i < 8; ++i){
         if((dx == king_vec[i][0]) && (dy == king_vec[i][1])){
             board[sy][sx] = 0;
-            board[ey][ex] = KING * player;
+            if(board[ey][ex] == (-1)*player*KING){
+                board[ey][ex] = KING*player;    
+                return 100;
+            }
+            board[ey][ex] = KING*player;
             return 1;
         }
     }
     return -1;
 }
+
 int queen(int sx, int sy, int ex, int ey){
     int queen_vec[8][2] = {
         {-1, -1}, { 0, -1}, { 1, -1},
         {-1,  0},           { 1,  0},
         {-1,  1}, { 0,  1}, { 1,  1}
     };
-    int i, j, dx, dy;
+    int i, j, k, dx, dy;
     int player = board[sy][sx] / QUEEN;
 
     dx = ex - sx;
-    dy = ey - ex;
+    dy = ey - sy;
 
-    for(i = 0; i < 8; ++i){
-        if((dx%queen_vec[i][0] == 0) && (dy%queen_vec[i][1] == 0)){
-            j = 1;
-            while((sx+queen_vec[i][0]*j != ex) && (sy+queen_vec[i][1]*j != ey)){
-                if(board[sy+queen_vec[i][1]*j][sx+queen_vec[i][0]*j] != 0) return -1;
-                j++;
+    // move
+    if(dx == 0){
+        if(dy < 0){
+            for(i = -1; i > dy; --i){
+                if(board[sy+i][sx] != 0) return -1;
             }
-            board[sy][sx] = 0;
-            board[ey][ex] = QUEEN * player;
-            return 1;
+        }
+        else{
+            for(i = 1; i < dy; ++i){
+                if(board[sy+i][sx] != 0) return -1;
+            }
         }
     }
-    return -1;
+    else if(dy == 0){
+        if(dx < 0){
+            for(i = -1; i > dx; --i){
+                if(board[sy][sx+i] != 0) return -1;
+            }
+        }
+        else{
+            for(i = 1; i < dx; ++i){
+                if(board[sy][sx+i] != 0) return -1;
+            }
+        }
+    }
+    else{
+        if(dy/dx == 1){
+            if(dy > 0){
+                for(i = 1; i < dy; ++i){
+                    if(board[sy+i][sx+i] != 0) return -1;
+                }
+            }
+            else{
+                for(i = -1; i > dy; --i){
+                    if(board[sy+i][sx+i] != 0) return -1;
+                }
+            }
+        }
+        else if(dy/dx == -1){
+            if(dy > 0){
+                for(i = 1; i < dy; ++i){
+                    if(board[sy+i][sx-i] != 0) return -1;
+                }
+            }
+            else{
+                for(i = 1; i < dx; ++i){
+                    if(board[sy-i][sx+i] != 0) return -1;
+                }
+            }
+        }
+        else return -1;
+    }
+
+    board[sy][sx] = 0;
+    if(board[ey][ex] == (-1)*player*KING){
+        board[ey][ex] = QUEEN * player;
+        return 100;
+    }
+    board[ey][ex] = QUEEN * player;
+    return 1;
 }
 
 int bishop(int sx, int sy, int ex, int ey){
@@ -205,21 +286,43 @@ int bishop(int sx, int sy, int ex, int ey){
     int player = board[sy][sx] / BISHOP;
 
     dx = ex - sx;
-    dy = ey - ex;
+    dy = ey - sy;
 
-    for(i = 0; i < 4; ++i){
-        if((dx%bishop_vec[i][0] == 0) && (dy%bishop_vec[i][1] == 0)){
-            j = 1;
-            while((sx+bishop_vec[i][0]*j != ex) && (sy+bishop_vec[i][1]*j != ey)){
-                if(board[sy+bishop_vec[i][1]*j][sx+bishop_vec[i][0]*j] != 0) return -1;
-                j++;
+    if(dx == 0 || dy == 0) return -1;
+    if(abs(dy/dx) != 1) return -1;
+
+    if(dy/dx == 1){
+        if(dy > 0){
+            for(i = 1; i < dy; ++i){
+                if(board[sy+i][sx+i] != 0) return -1;
             }
-            board[sy][sx] = 0;
-            board[ey][ex] = BISHOP * player;
-            return 1;
+        }
+        else{
+            for(i = -1; i > dy; --i){
+                if(board[sy+i][sx+i] != 0) return -1;
+            }
         }
     }
-    return -1;
+    else{
+        if(dy > 0){
+            for(i = 1; i < dy; ++i){
+                if(board[sy+i][sx-i] != 0) return -1;
+            }
+        }
+        else{
+            for(i = 1; i < dx; ++i){
+                if(board[sy-i][sx+i] != 0) return -1;
+            }
+        }
+    }
+
+    board[sy][sx] = 0;
+    if(board[sy][sx] == (-1)*player*KING){
+        board[ey][ex] = BISHOP * player;
+        return 100;
+    }
+    board[ey][ex] = BISHOP * player; 
+    return 1;
 }
 
 int knight(int sx, int sy, int ex, int ey){
@@ -233,12 +336,16 @@ int knight(int sx, int sy, int ex, int ey){
     int player = board[sy][sx] / KNIGHT;
 
     dx = ex - sx;
-    dy = ey - ex;
+    dy = ey - sy;
 
     for(i = 0; i < 8; ++i){
         if((dx == knight_vec[i][0]) && dy == knight_vec[i][1]){
             board[sy][sx] = 0;
-            board[ey][ex] = KNIGHT * player;
+            if(board[ey][ex] == (-1)*player*KING){
+                board[ey][ex] = KNIGHT*player;    
+                return 100;
+            }
+            board[ey][ex] = KNIGHT*player;
             return 1;
         }
     }
@@ -251,24 +358,45 @@ int rook(int sx, int sy, int ex, int ey){
                   { 0,  1},
     };
     int i, j, dx, dy;
-    int player = board[sy][sx] / KING;
+    int player = board[sy][sx] / ROOK;
 
     dx = ex - sx;
-    dy = ey - ex;
+    dy = ey - sy;
 
-    for(i = 0; i < 8; ++i){
-        if((dx%rook_vec[i][0] == 0) && (dy%rook_vec[i][1])){
-            j = 1;
-            while((sx+rook_vec[i][0]*j != ex) && (sy+rook_vec[i][1]*j != ey)){
-                if(board[sy+rook_vec[i][1]*j][sx+rook_vec[i][0]*j] != 0) return -1;
-                j++;
+    if(dx == 0){
+        if(dy > 0){
+            for(i = 1; i < dy; ++i){
+                if(board[sy+i][sx] != 0) return -1;
             }
-            board[sy][sx] = 0;
-            board[ey][ex] = ROOK * player;
-            return 1;
+        }
+        else{
+            for(i = -1; i > dy; --i){
+                if(board[sy+i][sx] != 0) return -1;
+            }
         }
     }
-    return -1;
+    else if (dy == 0){
+        if(dx > 0){
+            for(i = 1; i < dx; ++i){
+                if(board[sy][sx+i] != 0) return -1;
+            }
+        }
+        else{
+            for(i = -1; i > dx; --i){
+                if(board[sy][sx+i] != 0) return -1;
+            }
+        }
+    }
+    else return -1;
+
+    fprintf(stdout, "player = %d\n", player);
+    board[sy][sx] = 0;
+    if(board[ey][ex] == (-1)*player*KING){
+        board[ey][ex] = player*ROOK;
+        return 100;
+    } 
+    board[ey][ex] = player*ROOK;
+    return 1;
 }
 
 int pawn(int sx, int sy, int ex, int ey){
@@ -281,24 +409,29 @@ int pawn(int sx, int sy, int ex, int ey){
     int player = board[sy][sx] / PAWN;
 
     dx = ex - sx;
-    dy = ey - ex;
+    dy = ey - sy;
 
     if(player > 0){
         for(i = 0; i < 4; ++i){
             if((dx == pawn_vec[i][0]) && (dy == pawn_vec[i][1])){
                 if(i == 0){
                     if(sy != 6) return -1;
+                    if(board[ey][ex] != 0) return -1;
                 }
                 else if((i == 1) || (i == 3)){
                     if(board[ey][ex]*player >= 0) return -1;
                 }
                 else{
-                    if(board[ey][ex]*player < 0) return -1;
+                    if(board[ey][ex]*player != 0) return -1;
                 }
 
                 board[sy][sx] = 0;
-                if(ey == 0) board[ey][ex] = QUEEN;
-                else board[ey][ex] = PAWN;
+                if(board[ey][ex] == (-1)*player*KING){
+                    board[ey][ex] = PAWN*player;    
+                    return 100;
+                }
+                if(ey == 0) board[ey][ex] = QUEEN*player;
+                else board[ey][ex] = PAWN*player;
                 return 1;
             }
         }
@@ -318,8 +451,12 @@ int pawn(int sx, int sy, int ex, int ey){
                 }
 
                 board[sy][sx] = 0;
-                if(ey == 7) board[ey][ex] = QUEEN;
-                else board[ey][ex] = PAWN;
+                if(board[ey][ex] == (-1)*player*KING){
+                    board[ey][ex] = PAWN*player;    
+                    return 100;
+                }
+                if(ey == 7) board[ey][ex] = QUEEN*player;
+                else board[ey][ex] = PAWN*player;
                 return 1;
             }
         }
